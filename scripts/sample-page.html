@@ -1,0 +1,47 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Sample App</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.5 -apple-system, "PingFang SC", "Helvetica Neue", Arial, sans-serif; color: #1f2328; background: #f6f7f9; display: flex; height: 100vh; overflow: hidden; }
+  aside { width: 220px; background: #fff; border-right: 1px solid #e3e5e8; padding: 16px; flex-shrink: 0; }
+  aside h1 { font-size: 15px; margin: 0 0 16px; }
+  aside a { display: block; padding: 6px 10px; border-radius: 6px; color: #444; text-decoration: none; font-size: 13px; }
+  aside a.on { background: #eef2ff; color: #3b4fd8; font-weight: 600; }
+  main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  header { height: 64px; background: linear-gradient(90deg, #4f46e5, #06b6d4 60%, #f59e0b); color: #fff; display: flex; align-items: center; padding: 0 20px; font-weight: 600; font-size: 16px; gap: 12px; }
+  .spin { width: 18px; height: 18px; border: 3px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: s 0.8s linear infinite; }
+  @keyframes s { to { transform: rotate(360deg); } }
+  #scroller { flex: 1; overflow: auto; padding: 20px; }
+  .card { background: #fff; border: 1px solid #e3e5e8; border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; }
+  .card h3 { margin: 0 0 4px; font-size: 15px; }
+  .card p { margin: 0; color: #57606a; font-size: 13px; }
+  .tag { display: inline-block; font-size: 11px; padding: 1px 8px; border-radius: 999px; background: #dcfce7; color: #166534; margin-left: 8px; }
+  .bar { height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden; margin-top: 10px; }
+  .bar i { display: block; height: 100%; width: 30%; background: #3b82f6; animation: p 3s ease-in-out infinite alternate; }
+  @keyframes p { to { width: 95%; } }
+  .ball { position: fixed; right: 40px; bottom: 40px; width: 48px; height: 48px; border-radius: 12px; background: radial-gradient(circle at 30% 30%, #fda4af, #e11d48); animation: b 1.6s ease-in-out infinite alternate; }
+  @keyframes b { to { transform: translate(-260px, -120px) rotate(180deg); } }
+  .cursor { position: fixed; width: 14px; height: 14px; border-radius: 50%; background: rgba(239,68,68,.85); left: 300px; top: 200px; pointer-events: none; transition: left .4s, top .4s; }
+  @media (max-width: 600px) { aside { display: none; } .ball { right: 20px; } }
+</style></head>
+<body>
+<aside><h1>Acme Console</h1>
+<a class="on">仪表盘 Dashboard</a><a>项目 Projects</a><a>成员 Members</a><a>账单 Billing</a><a>设置 Settings</a></aside>
+<main>
+<header><div class="spin"></div>Release 2.4 — 正在同步 Syncing 1,284 records</header>
+<div id="scroller"></div>
+</main>
+<div class="ball"></div><div class="cursor" id="cur"></div>
+<script>
+  const s = document.getElementById('scroller');
+  for (let i = 1; i <= 40; i++) {
+    const d = document.createElement('div'); d.className = 'card';
+    d.innerHTML = `<h3>任务 #${1000 + i} · Update onboarding flow<span class="tag">Done</span></h3>
+      <p>The quick brown fox jumps over the lazy dog. 敏捷的棕色狐狸跳过了懒狗。Item ${i} of 40, updated ${i * 3} minutes ago.</p>
+      <div class="bar"><i style="animation-delay:-${i * 0.3}s"></i></div>`;
+    s.appendChild(d);
+  }
+  const cur = document.getElementById('cur'); let k = 0;
+  setInterval(() => { k++; cur.style.left = (200 + (k * 97) % 500) + 'px'; cur.style.top = (150 + (k * 53) % 300) + 'px'; }, 500);
+</script>
+</body></html>

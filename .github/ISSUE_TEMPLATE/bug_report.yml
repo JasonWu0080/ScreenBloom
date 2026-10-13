@@ -1,0 +1,65 @@
+name: Bug report
+description: Something doesn't work, or an export looks wrong.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Please **don't attach recordings that contain private information** —
+        issues are public. A short synthetic clip that reproduces the problem is ideal.
+        Security problems: see SECURITY.md instead of opening an issue.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open a 1920×1080 H.264 MP4
+        2. Crop 1:1, preset "HD"
+        3. Export GIF
+    validations:
+      required: true
+  - type: dropdown
+    id: output
+    attributes:
+      label: Output format
+      options: [GIF, Silent MP4, Not export-related]
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and version
+      placeholder: Chrome 155.0 / Safari 26.1 / Firefox 145
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system and device
+      placeholder: macOS 15.6, Apple M4 / Windows 11 / Android 16 (Pixel 9)
+    validations:
+      required: true
+  - type: textarea
+    id: source
+    attributes:
+      label: Source video
+      description: Container, codec, resolution, duration and how it was recorded (shown in the editor's info panel).
+      placeholder: MP4 / AVC, 2560×1440, 12 s, recorded with macOS screenshot tool
+  - type: textarea
+    id: details
+    attributes:
+      label: Error message and technical details
+      description: Copy the error text and the "Technical details" section if one was shown.
+      render: text
+  - type: input
+    id: version
+    attributes:
+      label: App version or commit
+      placeholder: v0.1.0 / commit SHA / URL of the deployment

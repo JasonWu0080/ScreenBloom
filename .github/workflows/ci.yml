@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Read-only token; no secrets are used by any job, so fork PRs run the same checks safely.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NEXT_TELEMETRY_DISABLED: "1"
+
+jobs:
+  check:
+    name: Type check · Lint · Unit tests · Build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      - name: Build output contains license notices
+        run: test -f out/LICENSE.txt && test -f out/THIRD_PARTY_NOTICES.md
+
+  e2e:
+    name: End-to-end (Chrome)
+    needs: check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+      # The tests run in branded Google Chrome (H.264 decode/encode), plus Playwright's ffmpeg
+      # for recording the synthetic sample videos.
+      - run: npx playwright install --with-deps chrome ffmpeg
+      - name: Generate sample videos
+        run: npm run samples
+      - run: npm run build
+      - run: npm run e2e
+      - name: Upload e2e outputs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-results
+          path: test-results/
+          retention-days: 7
+
+  # Large-input limit and timing checks are slow; run them on demand only.
+  stress:
+    name: Stress / limits (manual)
+    if: github.event_name == 'workflow_dispatch'
+    needs: check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+      - run: npx playwright install --with-deps chrome ffmpeg
+      - run: node scripts/make-samples.mjs --stress
+      - run: npm run build
+      - run: npm run e2e:stress

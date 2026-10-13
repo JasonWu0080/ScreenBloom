@@ -1,0 +1,55 @@
+{
+  "name": "screenbloom",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A privacy-first, open-source screen recording to GIF converter powered by native browser APIs (WebCodecs). Trim, crop and export GIF or silent MP4 entirely in the browser.",
+  "license": "MIT",
+  "author": "Nanjing Junhe E-Commerce Co., Ltd. <1156872601@qq.com>",
+  "keywords": [
+    "gif",
+    "screen-recording",
+    "video-to-gif",
+    "webcodecs",
+    "mp4",
+    "h264",
+    "gif-encoder",
+    "local-first",
+    "privacy",
+    "nextjs"
+  ],
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "postbuild": "node scripts/copy-notices.mjs",
+    "start": "node scripts/serve-out.mjs",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "samples": "node scripts/make-samples.mjs",
+    "e2e": "node tests/e2e/run.mjs",
+    "e2e:stress": "node tests/e2e/stress.mjs",
+    "check": "npm run typecheck && npm run lint && npm test"
+  },
+  "dependencies": {
+    "gifenc": "^1.0.3",
+    "mediabunny": "^1.61.3",
+    "next": "16.4.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/turbopack": "^4",
+    "@types/node": "^24.19.2",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.0",
+    "playwright": "^1.64.0",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "vitest": "^5.0.3"
+  }
+}
