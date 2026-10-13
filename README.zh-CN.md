@@ -125,9 +125,6 @@ npm run build
 
 最新结果记录在 [docs/OPEN_SOURCE_RELEASE_REPORT.md](docs/OPEN_SOURCE_RELEASE_REPORT.md)。
 
-## 浏览器支持
-
-自动化测试只在 **macOS 桌面版 Google Chrome** 上运行过，其他浏览器尚未验证，矩阵与人工验证步骤见 [docs/BROWSER_SUPPORT.md](docs/BROWSER_SUPPORT.md)。应用在运行时按实际能力检测（安全上下文、Worker、WebCodecs、OffscreenCanvas、实际解码文件、实际 H.264 编码能力），缺什么就说明什么。
 
 ## 架构
 
