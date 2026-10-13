@@ -143,10 +143,13 @@ this way. Some viewers (for example certain chat apps) ignore finite loop counts
   [`tests/unit/gif-decoder.ts`](../tests/unit/gif-decoder.ts).
 - [`tests/unit/gif-pipeline.test.ts`](../tests/unit/gif-pipeline.test.ts) — the full
   palette → mapping → differencing → writer pipeline on synthetic static UI, cursor movement,
-  scrolling, gradients with dithering, text, noise, and long still sections. Every decoded frame
+  scrolling, gradients with dithering, text, noise, long still sections, and complex motion
+  (overlapping moving objects, pixels reverting A → B → A, objects leaving the frame). Every decoded frame
   must equal the mapped input exactly, the transparent slot must never be visible, and total
   delay must be preserved.
 - [`tests/unit/timeline.test.ts`](../tests/unit/timeline.test.ts) — timing across frame rates,
   speeds and holds.
-- `tests/e2e/run.mjs` — real exports in Chrome, checked with ffprobe, a GIF block parser and
-  Chrome's `ImageDecoder`.
+- `tests/e2e/run.mjs` and `tests/e2e/smoke.mjs` — real exports in Chrome, checked with ffprobe, a
+  GIF block parser and a full decode of every frame with Chrome's `ImageDecoder` (frame count,
+  size, total duration, and no transparent pixels left in the last composited frame).
+- `tests/bench/gif-bench.mjs` — export speed and output size; see [PERFORMANCE.md](PERFORMANCE.md).

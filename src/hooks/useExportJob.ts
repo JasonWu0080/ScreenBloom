@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { EditParams, OutputFormat, SourceInfo } from "@/lib/edit/types";
-import type { ErrorCode } from "@/lib/jobs/protocol";
+import type { ErrorCode, ExportStats } from "@/lib/jobs/protocol";
 import { TaskError, runTask, type Progress, type Task } from "@/lib/jobs/worker-client";
 
 export interface ExportedFile {
@@ -15,6 +15,7 @@ export interface ExportedFile {
   duration: number;
   frames: number;
   gifLoop: number;
+  stats: ExportStats;
   /** Identifies the edit (all params except format) this result was made from. */
   editKey: string;
 }
@@ -66,6 +67,7 @@ export function useExportJob() {
         duration: result.duration,
         frames: result.frames,
         gifLoop: params.gifLoop,
+        stats: result.stats,
         editKey: editKey(params),
       };
       setResults((prev) => {

@@ -16,10 +16,13 @@ export class FrameScaler {
     readonly width: number,
     readonly height: number,
     private readonly source: Rect,
-    readForPixels: boolean,
   ) {
     this.canvas = new OffscreenCanvas(width, height);
-    const ctx = this.canvas.getContext("2d", { alpha: false, willReadFrequently: readForPixels });
+    // Deliberately no `willReadFrequently`, even though GIF export reads pixels every frame: that
+    // hint forces a CPU-backed canvas, so all scaling runs in software. Keeping the canvas GPU
+    // accelerated and paying one small readback per frame measured 26 % faster for a 1080p →
+    // 800 px GIF with equal quality (docs/PERFORMANCE.md).
+    const ctx = this.canvas.getContext("2d", { alpha: false });
     if (!ctx) throw new Error("2D canvas unavailable");
     this.ctx = ctx;
     this.ctx.imageSmoothingEnabled = true;

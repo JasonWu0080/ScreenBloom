@@ -8,10 +8,11 @@ import type { SourceState } from "@/hooks/useSourceLoader";
 import { LIMITS } from "@/lib/config";
 import { formatBytes } from "@/lib/format";
 import { useI18n } from "@/lib/i18n/I18nProvider";
+import { BUILD, SITE, shortCommit } from "@/lib/site";
 
 export function HomeScreen({ state, support, onFile }: { state: SourceState; support: LocalSupport; onFile: (f: File) => void }) {
   const { t } = useI18n();
-  const supported = support === "ok";
+  const supported = support.status === "ok";
   const inputRef = useRef<HTMLInputElement>(null);
   const [over, setOver] = useState(false);
   const loading = state.status === "loading";
@@ -75,7 +76,7 @@ export function HomeScreen({ state, support, onFile }: { state: SourceState; sup
 
       {!supported && (
         <p className="mt-4 rounded-md border border-[#f3cdc6] bg-danger-soft px-3 py-2 text-sm text-danger" role="alert">
-          {support === "insecure" ? t("insecureContext") : t("browserUnsupported")}
+          {support.status === "unsupported" ? t("browserUnsupported", { apis: support.missing.join(", ") }) : t("insecureContext")}
         </p>
       )}
       {state.status === "error" && (
@@ -114,6 +115,16 @@ export function HomeScreen({ state, support, onFile }: { state: SourceState; sup
           <dd className="mt-1 leading-relaxed text-ink-2">{t("browserBody")}</dd>
         </div>
       </dl>
+
+      <footer className="mt-8 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-3">
+        <span data-testid="app-version" title={BUILD.time ? `Built ${BUILD.time}` : undefined}>
+          {SITE.name} v{BUILD.version} · {shortCommit(BUILD.commit)}
+        </span>
+        <a href={SITE.repo} target="_blank" rel="noopener noreferrer" className="underline-offset-2 hover:text-ink hover:underline">
+          {t("sourceCode")}
+        </a>
+        <span>MIT License</span>
+      </footer>
     </main>
   );
 }

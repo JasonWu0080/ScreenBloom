@@ -1,8 +1,8 @@
-# 录屏转 GIF — 架构文档
+# ScreenBloom — 架构文档
 
 > 适用版本：0.1.0（第一版）
 > 本文描述系统的结构、运行时行为、关键算法和设计取舍。使用与运行方法见 [README](../README.md)（[中文](../README.zh-CN.md)）。
-> 英文专题文档：[GIF 编码器](GIF_ENCODER.md) · [浏览器支持](BROWSER_SUPPORT.md) · [性能](PERFORMANCE.md) · [自托管](SELF_HOSTING.md) · [路线图](ROADMAP.md)。
+> 英文专题文档：[GIF 编码器](GIF_ENCODER.md) · [浏览器兼容性](BROWSER_COMPATIBILITY.md) · [性能](PERFORMANCE.md) · [自托管](SELF_HOSTING.md) · [路线图](ROADMAP.md)。
 
 ## 目录
 
@@ -127,6 +127,8 @@ src/
 │  └─ useCapabilities.ts    安全上下文/API 检测（同步）；H.264 编码能力检测（Worker）
 ├─ lib/
 │  ├─ config.ts             本地处理上限（唯一配置点）
+│  ├─ capabilities.ts       必需浏览器 API 清单与缺失检测（主线程与 Worker 共用，纯函数）
+│  ├─ site.ts               产品名、公开 URL、构建版本信息（构建时注入）
 │  ├─ format.ts             时间/大小格式化与解析、下载文件名
 │  ├─ edit/                 ★ 领域层（纯函数）
 │  │  ├─ types.ts           EditParams、SourceInfo、Rect 等类型
@@ -136,7 +138,7 @@ src/
 │  │  └─ timeline.ts        GIF 帧计划（厘秒延时）与 MP4 恒定帧率计划
 │  ├─ media/                （仅 Worker）
 │  │  ├─ probe.ts           打开输入、探测信息、解码首帧、编码能力检测
-│  │  ├─ frames.ts          FrameScaler：裁剪 + 分级减半高质量缩放
+│  │  ├─ frames.ts          FrameScaler：裁剪 + 分级减半高质量缩放（GPU 加速画布）
 │  │  └─ errors.ts          JobError 与异常分类
 │  ├─ encode/               （仅 Worker）
 │  │  ├─ export.ts          GIF / MP4 导出流水线
@@ -313,6 +315,7 @@ sequenceDiagram
 
 - `framesAt()`：用 Mediabunny `CanvasSink.canvasesAtTimestamps()` 按**单调递增的时间戳**取帧，每个数据包最多解码一次。时间戳小于首帧时钳到首帧；可变帧率文件中个别时间点取不到帧时，沿用上一帧，保证时间轴不偏移。
 - `FrameScaler`：从已旋转的整帧中按 `sourceRect` 裁出，再缩放到输出尺寸。缩小超过 2 倍时**逐级减半**（每级 `imageSmoothingQuality = "high"`），避免小字发虚或锯齿。
+- 输出画布**不**设置 `willReadFrequently`：该提示会让画布改为 CPU 渲染，缩放全部由软件完成。保持 GPU 加速、每帧只读回一次较小的输出画面，在 1080p → 800 px GIF 基准中快 26%，画质相同（见 [PERFORMANCE.md](PERFORMANCE.md)）。
 
 ### 7.3 GIF 流水线
 
@@ -400,16 +403,16 @@ Worker 内的异常由 `classifyError` 归类为面向用户的错误码，主�
 | `mp4_unsupported` | 浏览器不能生成 MP4 | `canEncodeVideo('avc')` 为 false |
 | `resources` | 本地资源不足 | 内存分配失败、`QuotaExceededError` 等 |
 | `load_failed` | 处理模块加载失败 | Worker 在发出 `ready` 之前就报错 |
-| `browser_unsupported` | 缺少必要的浏览器 API | 无 `VideoDecoder` / `OffscreenCanvas` |
+| `browser_unsupported` | 缺少必要的浏览器 API | Worker 内 `missingApis()` 非空（详情中列出缺失的 API） |
 | `failed` | 其他转换失败 | 兜底 |
 | `cancelled` | 用户取消 | 不显示为错误，直接回到编辑器 |
 
-此外，主线程在页面加载时同步检测运行环境（`localProcessingSupport`）：页面不是安全上下文（非 HTTPS、非 localhost）时，提示用户改用 HTTPS 或 localhost；缺少 API 时提示换用浏览器。两种情况都会禁用上传。
+此外，主线程在页面加载时同步检测运行环境（`localProcessingSupport` → `lib/capabilities.ts` 的 `missingApis()`）：页面不是安全上下文（非 HTTPS、非 localhost）时，提示用户改用 HTTPS 或 localhost；缺少 `Worker`、`VideoDecoder`、`EncodedVideoChunk`、`VideoFrame`、`OffscreenCanvas`（含 2D 上下文）中的任意一项时，**逐项列出缺失的 API** 并提示换用浏览器。两种情况都会禁用上传。H.264 编码能力单独检测：先用 1280×720 配置给出界面提示（不可用时说明 GIF 仍可导出），每次 MP4 导出前再用实际尺寸、码率和帧率调用 `canEncodeVideo` 复核——仅有 `VideoEncoder` 不代表 H.264 可用。
 
 ## 10. 国际化与界面
 
 - **文案**：`lib/i18n/messages.ts` 中，中文字典的键定义了类型 `MessageKey`，英文字典必须实现全部键（编译期检查），支持 `{name}` 插值。
-- **语言选择**：静态 HTML 以中文渲染；挂载后按 `localStorage` 或浏览器语言切换，并同步 `<html lang>` 与页面标题。
+- **语言选择**：静态 HTML 以英文渲染（搜索引擎和链接预览读取的内容，与英文 `<title>`/描述一致）；挂载后按 `localStorage` 或浏览器语言切换，并同步 `<html lang>` 与本地化的页面标题。两种语言共用同一个 URL，因此只有一个 canonical，不设置 hreflang。
 - **布局**：
   - 桌面（`lg` 及以上）：左侧预览 + 底部时间轴，右侧 360 px 设置面板；导出栏固定在面板底部。
   - 小屏：预览 → 时间轴 → 设置 → 导出依次排列；所有拖动操作都有数值输入作为替代。
@@ -420,7 +423,8 @@ Worker 内的异常由 `classifyError` 归类为面向用户的错误码，主�
 
 | 项目 | 说明 |
 | --- | --- |
-| 构建 | `next build`，`output: "export"`，产物在 `out/`（约 1.3 MB）；`postbuild` 把 `LICENSE` 与 `THIRD_PARTY_NOTICES.md` 复制进 `out/`（压缩会去掉依赖的许可证注释，MPL-2.0 的 Mediabunny 需要随产物附带声明） |
+| 构建 | `npm run build`：`prebuild`（`scripts/build-info.mjs`）记录版本号、Git 提交（工作区有未提交修改时带 `-dirty`）和构建时间；`next build`（`output: "export"`）把它们编译进页面，产物在 `out/`；`postbuild`（`scripts/postbuild.mjs`）把 `LICENSE`、`THIRD_PARTY_NOTICES.md` 和 `version.json` 复制进 `out/`（压缩会去掉依赖的许可证注释，MPL-2.0 的 Mediabunny 需要随产物附带声明） |
+| SEO 与分享 | `app/layout.tsx` 的 metadata（标题、描述、canonical、Open Graph、Twitter Card、SoftwareApplication JSON-LD）；`app/robots.ts`、`app/sitemap.ts`（`force-static`）；`public/og-image.png`。绝对地址基于构建时的 `SITE_URL`（默认生产地址） |
 | Worker 打包 | `new Worker(new URL("../../workers/media.worker.ts", import.meta.url), { type: "module" })`，Turbopack 单独打包为一个 chunk（约 500 KB，gzip 后约 130 KB），只在第一次运行任务时下载 |
 | 托管 | 任意静态服务器 / 对象存储 / CDN；`.js` 需以 JavaScript MIME 类型提供 |
 | 响应头 | 不需要 COOP/COEP。推荐的安全响应头（CSP、nosniff 等）见 [SELF_HOSTING.md](SELF_HOSTING.md)；`npm start` 与 e2e 测试使用同一组响应头，保证其与 Worker、WebCodecs、blob 预览兼容 |
@@ -440,9 +444,11 @@ Worker 内的异常由 `classifyError` 归类为面向用户的错误码，主�
 
 | 层级 | 位置 | 内容 |
 | --- | --- | --- |
-| 单元测试（Vitest，57 项） | `tests/unit/` | 时间映射与速度、停留、厘秒取整（多帧率/速度/停留组合无累计误差）；裁剪几何；输出尺寸；参数规范化（幂等、非法快照纠正）与预设识别；错误分类与可重试判定；GIF89a 结构（全局色表、GCE、图像描述符、透明、处置方式、最小码长、循环块、超长延时拆分）；LZW 往返（含多次字典清表）；GIF 流水线像素级回归（静态界面、鼠标移动、滚动、渐变抖动、文字、高频动画、长时间静止）。GIF 输出均由独立解码器 `tests/unit/gif-decoder.ts` 校验 |
-| 端到端（Playwright + Chrome，54 项） | `tests/e2e/run.mjs` | 通过真实界面操作并下载真实文件，用 ffprobe 检查编码、流数量、尺寸、时长、帧数和无音轨；用 GIF 块解析器检查逐帧延时与循环值；用 Chrome `ImageDecoder` 检查浏览器对循环的解读；验证旋转、VFR、损坏文件、取消后重导出、更换文件确认与资源释放、中英文与小屏无溢出、裁剪拖动与窗口缩放、无跨域/非 GET 请求。HEVC 样本只能在 macOS 生成，其他平台自动跳过该项 |
+| 单元测试（Vitest，69 项） | `tests/unit/` | 时间映射与速度、停留、厘秒取整（多帧率/速度/停留组合无累计误差）；裁剪几何；输出尺寸；参数规范化（幂等、非法快照纠正）与预设识别；错误分类与可重试判定；GIF89a 结构（全局色表、GCE、图像描述符、透明、处置方式、最小码长、循环块、超长延时拆分）；LZW 往返（含多次字典清表）；GIF 流水线像素级回归（静态界面、鼠标移动、滚动、渐变抖动、文字、高频动画、长时间静止、多物体重叠运动、A→B→A 回退、物体移出画面）；格式化与解析、能力检测、版本号显示。GIF 输出均由独立解码器 `tests/unit/gif-decoder.ts` 校验 |
+| 端到端（Playwright + Chrome，69 项） | `tests/e2e/run.mjs` | 通过真实界面操作并下载真实文件，用 ffprobe 检查编码、流数量、尺寸、时长、帧数和无音轨；用 GIF 块解析器检查逐帧延时与循环值；用 Chrome `ImageDecoder` 完整解码每一帧（帧数、尺寸、总时长、最后一帧合成后无透明像素）并检查循环；取消后 Worker 已终止；缺少 WebCodecs 时的逐项提示；SEO 元数据、robots/sitemap/OG 图片/version.json；验证旋转、VFR、损坏文件、取消后重导出、更换文件确认与资源释放、中英文与小屏无溢出、裁剪拖动与窗口缩放、无跨域/非 GET 请求。HEVC 样本只能在 macOS 生成，其他平台自动跳过该项 |
+| 冒烟测试 | `tests/e2e/smoke.mjs` | 关键路径，可通过 `E2E_BASE_URL` 指向任意部署（含生产环境）；额外检查 Worker 数量、连续导出时主线程堆内存、4xx/5xx |
 | 上限与性能（8 项） | `tests/e2e/stress.mjs` | 5K 源、6K 源被拒绝、62 s 超限提示、60 s GIF、62 s MP4 |
+| 基准测试 | `tests/bench/gif-bench.mjs` | 1080p/10 s/30 fps → 800 px/15 fps GIF，多次运行取中位数，可与基线比较相对回归 |
 | 测试素材 | `scripts/make-samples.mjs` | 用 Chrome 录制含中英文、滚动、渐变、动画的网页，再用 ffmpeg 生成 MP4 / WebM / MOV / HEVC / 旋转 / VFR / 损坏样本（合成素材，非真机录屏） |
 
 ## 14. 关键设计决策

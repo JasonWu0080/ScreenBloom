@@ -1,5 +1,6 @@
 const zh = {
-  appName: "录屏转 GIF",
+  appName: "ScreenBloom",
+  docTitle: "ScreenBloom — 免费在线视频转 GIF 工具",
   langSwitch: "English",
   langSwitchLabel: "Switch to English",
 
@@ -19,7 +20,8 @@ const zh = {
   browserBody: "推荐桌面版 Chrome 或 Edge 最新版。",
   insecureContext: "当前页面不是通过 HTTPS 或 localhost 打开的，浏览器因此关闭了本地视频处理功能。请改用 https:// 地址，或在本机用 http://localhost 打开。",
   readingFile: "正在读取视频…",
-  browserUnsupported: "当前浏览器缺少本地视频处理所需的功能（WebCodecs / OffscreenCanvas）。请使用最新版桌面 Chrome 或 Edge。",
+  browserUnsupported: "当前浏览器缺少必需的功能（{apis}），因此无法在这里打开视频或导出 GIF / MP4。请使用最新版桌面 Chrome 或 Edge。",
+  sourceCode: "源代码",
 
   // Errors
   err_unreadable: "无法读取这个文件。它可能不是视频、已损坏，或者是浏览器不认识的封装格式。",
@@ -80,6 +82,7 @@ const zh = {
   formatGif: "GIF",
   formatMp4: "静音 MP4",
   mp4UnavailableShort: "当前浏览器不支持",
+  mp4UnavailableHelp: "当前浏览器无法进行 H.264 编码，因此不能导出 MP4；GIF 导出不受影响。",
   checking: "检测中…",
   preset: "质量预设",
   preset_small: "小文件",
@@ -148,7 +151,8 @@ export type MessageKey = keyof typeof zh;
 export type Messages = Record<MessageKey, string>;
 
 const en: Messages = {
-  appName: "Screen to GIF",
+  appName: "ScreenBloom",
+  docTitle: "ScreenBloom — Free Online Video to GIF Converter",
   langSwitch: "中文",
   langSwitchLabel: "切换到中文",
 
@@ -167,7 +171,8 @@ const en: Messages = {
   browserBody: "Latest desktop Chrome or Edge recommended.",
   insecureContext: "This page wasn't opened over HTTPS or localhost, so the browser disables local video processing. Use an https:// address, or open it via http://localhost on this computer.",
   readingFile: "Reading video…",
-  browserUnsupported: "This browser lacks the features needed for local video processing (WebCodecs / OffscreenCanvas). Please use the latest desktop Chrome or Edge.",
+  browserUnsupported: "This browser is missing required features ({apis}), so ScreenBloom can't open videos or export GIFs and MP4s here. Please use the latest desktop Chrome or Edge.",
+  sourceCode: "Source code",
 
   err_unreadable: "This file can't be read. It may not be a video, may be damaged, or uses a container the browser doesn't understand.",
   err_no_video: "No usable video track was found. The file may contain audio only, or be incomplete (e.g. an interrupted download or recording).",
@@ -223,6 +228,7 @@ const en: Messages = {
   formatGif: "GIF",
   formatMp4: "Silent MP4",
   mp4UnavailableShort: "Not supported in this browser",
+  mp4UnavailableHelp: "This browser can't encode H.264, so MP4 export is unavailable. GIF export still works.",
   checking: "Checking…",
   preset: "Quality preset",
   preset_small: "Small",

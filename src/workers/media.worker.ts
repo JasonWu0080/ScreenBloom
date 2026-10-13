@@ -1,6 +1,7 @@
 /// <reference lib="webworker" />
 // All decoding and encoding happens here, off the main thread. Each job gets a fresh worker
 // that is terminated afterwards (or on cancel), so no state leaks between jobs.
+import { WORKER_APIS, missingApis } from "@/lib/capabilities";
 import { checkLimits, normalizeParams } from "@/lib/edit/params";
 import { exportClip } from "@/lib/encode/export";
 import { JobError, classifyError } from "@/lib/media/errors";
@@ -15,8 +16,9 @@ let lastProgress = 0;
 scope.onmessage = async (ev: MessageEvent<WorkerRequest>) => {
   const req = ev.data;
   try {
-    if (typeof VideoDecoder === "undefined" || typeof OffscreenCanvas === "undefined") {
-      post({ type: "error", code: "browser_unsupported" });
+    const missing = missingApis(scope, WORKER_APIS);
+    if (missing.length) {
+      post({ type: "error", code: "browser_unsupported", detail: `missing in worker: ${missing.join(", ")}` });
       return;
     }
     if (req.type === "probe") {

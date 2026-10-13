@@ -5,26 +5,53 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for the report. Please **don't attach recordings that contain private information** —
-        issues are public. A short synthetic clip that reproduces the problem is ideal.
-        Security problems: see SECURITY.md instead of opening an issue.
-  - type: textarea
-    id: what
+        Thanks for the report!
+
+        **Please don't upload private videos, sensitive screen recordings, or files that show personal
+        information** (names, e-mails, chats, documents, faces). Issues are public. A short synthetic
+        clip that reproduces the problem is ideal — or just describe the file below.
+
+        Security problems: follow [SECURITY.md](https://github.com/JasonWu0080/ScreenBloom/blob/main/SECURITY.md) instead of opening an issue.
+  - type: input
+    id: browser
     attributes:
-      label: What happened?
-      description: What did you do, what did you expect, and what happened instead?
+      label: Browser
+      placeholder: Chrome / Edge / Safari / Firefox
     validations:
       required: true
-  - type: textarea
-    id: steps
+  - type: input
+    id: browser-version
     attributes:
-      label: Steps to reproduce
-      placeholder: |
-        1. Open a 1920×1080 H.264 MP4
-        2. Crop 1:1, preset "HD"
-        3. Export GIF
+      label: Browser version
+      description: e.g. chrome://version, or "About" in the browser menu.
+      placeholder: "155.0.8059.40"
     validations:
       required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system and device
+      placeholder: macOS 15.6 (Apple M4) / Windows 11 / Android 16 (Pixel 9)
+    validations:
+      required: true
+  - type: input
+    id: format
+    attributes:
+      label: Video format
+      description: Container and codec, shown in the editor's info panel (e.g. "MP4 / AVC").
+      placeholder: MP4 / AVC (H.264), MOV / HEVC, WebM / VP9 …
+    validations:
+      required: true
+  - type: input
+    id: resolution
+    attributes:
+      label: Video resolution
+      placeholder: 2560 × 1440
+  - type: input
+    id: duration
+    attributes:
+      label: Video duration
+      placeholder: 12 s
   - type: dropdown
     id: output
     attributes:
@@ -32,34 +59,39 @@ body:
       options: [GIF, Silent MP4, Not export-related]
     validations:
       required: true
-  - type: input
-    id: browser
+  - type: textarea
+    id: steps
     attributes:
-      label: Browser and version
-      placeholder: Chrome 155.0 / Safari 26.1 / Firefox 145
-    validations:
-      required: true
-  - type: input
-    id: os
-    attributes:
-      label: Operating system and device
-      placeholder: macOS 15.6, Apple M4 / Windows 11 / Android 16 (Pixel 9)
+      label: Reproduction steps
+      placeholder: |
+        1. Open a 1920×1080 H.264 MP4
+        2. Crop 1:1, preset "HD"
+        3. Export GIF
     validations:
       required: true
   - type: textarea
-    id: source
+    id: expected
     attributes:
-      label: Source video
-      description: Container, codec, resolution, duration and how it was recorded (shown in the editor's info panel).
-      placeholder: MP4 / AVC, 2560×1440, 12 s, recorded with macOS screenshot tool
+      label: Expected behavior
+    validations:
+      required: true
   - type: textarea
-    id: details
+    id: actual
     attributes:
-      label: Error message and technical details
-      description: Copy the error text and the "Technical details" section if one was shown.
-      render: text
+      label: Actual behavior
+      description: What happened instead? Include the error text and the "Technical details" section if one was shown.
+    validations:
+      required: true
   - type: input
     id: version
     attributes:
-      label: App version or commit
-      placeholder: v0.1.0 / commit SHA / URL of the deployment
+      label: ScreenBloom version
+      description: Shown at the bottom of the home page (e.g. "ScreenBloom v0.1.1 · a1b2c3d"), or the URL of the deployment you used.
+      placeholder: v0.1.1 · a1b2c3d — https://screenbloom.storyweave.cloud
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy
+      options:
+        - label: I have not attached private videos, sensitive recordings or files with personal information.
+          required: true
