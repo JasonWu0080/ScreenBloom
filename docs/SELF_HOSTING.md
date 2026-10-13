@@ -13,9 +13,32 @@ npm ci
 npm run build
 ```
 
-The site is written to `out/` (about 1.3 MB). It includes `LICENSE.txt` and
+The site is written to `out/` (about 1.4 MB). It includes `LICENSE.txt` and
 `THIRD_PARTY_NOTICES.md`; keep them when you deploy — the bundled Mediabunny code is MPL-2.0
 and its notice must travel with it.
+
+### Build-time settings
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `SITE_URL` | `https://screenbloom.storyweave.cloud` | Public URL of your copy (including any sub-path). Used for the canonical link, Open Graph / Twitter image URLs, `robots.txt` and `sitemap.xml`. **Set it when you host your own copy**, otherwise those point to the official site. |
+| `BASE_PATH` | none | Sub-path deployment, see below. |
+| `SOURCE_DATE_EPOCH` | current time | Fixed build time (seconds) for reproducible builds. |
+
+```bash
+SITE_URL=https://gif.example.com npm run build
+```
+
+### Which version is deployed?
+
+Every build contains `version.json` (also shown at the bottom of the home page):
+
+```json
+{ "name": "ScreenBloom", "version": "0.1.1", "commit": "<full Git SHA>", "buildTime": "<ISO time>" }
+```
+
+A commit ending in `-dirty` means the build was made from a working tree with uncommitted
+changes. Check a deployment with `curl https://<your-site>/version.json`.
 
 Tagged releases also provide a ready-made `screenbloom-vX.Y.Z-static.zip` on the GitHub
 Releases page once maintainers publish them.
@@ -41,6 +64,10 @@ Requirements:
 - **No special cross-origin headers.** No `SharedArrayBuffer` or multi-threaded WASM is used,
   so COOP/COEP are not needed.
 - `index.html` at the root; `404.html` can be used as the not-found page.
+- `robots.txt`, `sitemap.xml` and `og-image.png` are plain files at the root; serve `.xml` as
+  XML and `.png` as an image. Serving `.md` as `text/markdown; charset=utf-8` (Nginx: add
+  `text/markdown md;` to `types`) lets browsers display `THIRD_PARTY_NOTICES.md` instead of
+  downloading it.
 
 The worker bundle (~500 KB, ~130 KB gzipped) is only downloaded when a user opens a file.
 Files under `/_next/static/` have content hashes in their names and can be cached for a long

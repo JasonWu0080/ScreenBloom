@@ -166,6 +166,46 @@ describe("GIF pipeline on screen-recording-like content", () => {
   });
 });
 
+describe("frame differencing under complex motion (ghosting regression)", () => {
+  // Several sprites move on different paths, overlap each other, and pixels return to the
+  // color they had two frames earlier. Unchanged-vs-previous pixels become transparent, so any
+  // bookkeeping error in the previous-frame buffer shows up as stale pixels (ghosts) here.
+  const sprites = (t: number) => [
+    { x: (t * 7) % (W - 20), y: 20 + Math.round(10 * Math.sin(t / 2)), s: 18, c: [220, 38, 38] as RGB },
+    { x: W - 24 - ((t * 5) % (W - 24)), y: 40, s: 22, c: [22, 163, 74] as RGB },
+    { x: 60 + Math.round(30 * Math.cos(t / 3)), y: 30 + ((t * 3) % 40), s: 14, c: [37, 99, 235] as RGB },
+  ];
+  const scene = (t: number) =>
+    frame((x, y) => {
+      for (const sp of sprites(t)) if (x >= sp.x && x < sp.x + sp.s && y >= sp.y && y < sp.y + sp.s) return sp.c;
+      return ui(x, y);
+    });
+
+  it("overlapping moving objects decode exactly, frame by frame", () => {
+    const frames = Array.from({ length: 40 }, (_, t) => scene(t));
+    const delays = frames.map(() => 7);
+    const r = encode(frames, delays);
+    expectFaithful(r, delays);
+  });
+
+  it("A → B → A (pixels revert to an older value) leaves no stale pixels", () => {
+    const a = scene(0);
+    const b = scene(9);
+    const frames = [a, b, a, b, b, a, scene(3), a];
+    const delays = [5, 5, 5, 5, 5, 5, 5, 5];
+    const r = encode(frames, delays);
+    expectFaithful(r, delays);
+  });
+
+  it("an object leaving the frame restores the background completely", () => {
+    const frames = [scene(0), scene(1), frame(ui), frame(ui), scene(2)];
+    const delays = [10, 10, 10, 10, 10];
+    const r = encode(frames, delays);
+    expectFaithful(r, delays);
+    expect(r.written).toBe(4); // the two identical background frames merge
+  });
+});
+
 describe("PaletteMapper", () => {
   it("is deterministic: the same color always maps to the same index", () => {
     const pal = Array.from({ length: 64 }, (_, i) => [i * 4, 255 - i * 4, (i * 37) & 255]);

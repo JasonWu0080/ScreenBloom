@@ -1,14 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { missingApis } from "@/lib/capabilities";
 import { TaskError, runTask } from "@/lib/jobs/worker-client";
 
-export type LocalSupport = "ok" | "insecure" | "unsupported";
+export type LocalSupport = { status: "ok" } | { status: "insecure" } | { status: "unsupported"; missing: string[] };
 
 /** Synchronous check for the APIs local processing depends on. WebCodecs only exist in secure contexts. */
 export function localProcessingSupport(): LocalSupport {
-  if (typeof window !== "undefined" && !window.isSecureContext) return "insecure";
-  return typeof Worker !== "undefined" && typeof VideoDecoder !== "undefined" && typeof OffscreenCanvas !== "undefined" ? "ok" : "unsupported";
+  if (typeof window !== "undefined" && !window.isSecureContext) return { status: "insecure" };
+  const missing = missingApis();
+  return missing.length ? { status: "unsupported", missing } : { status: "ok" };
 }
 
 export type Mp4Support = "checking" | "yes" | "no";

@@ -1,5 +1,8 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Report a security vulnerability
-    url: https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing-information-about-vulnerabilities/privately-reporting-a-security-vulnerability
-    about: Please report security issues privately (see SECURITY.md), not in public issues.
+  - name: Report a security vulnerability (privately)
+    url: https://github.com/JasonWu0080/ScreenBloom/blob/main/SECURITY.md
+    about: Don't open a public issue for vulnerabilities — follow SECURITY.md to report them privately.
+  - name: Try ScreenBloom online
+    url: https://screenbloom.storyweave.cloud
+    about: The hosted app. Your videos are processed in your browser and never uploaded.

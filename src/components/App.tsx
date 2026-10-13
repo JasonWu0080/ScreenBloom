@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { EditorScreen } from "@/components/editor/EditorScreen";
 import { HomeScreen } from "@/components/HomeScreen";
+import { Logo } from "@/components/Logo";
 import { ResultScreen } from "@/components/ResultScreen";
 import { Button } from "@/components/ui";
 import { localProcessingSupport, useMp4Support, type LocalSupport } from "@/hooks/useCapabilities";
@@ -24,7 +25,7 @@ export function App() {
   const [view, setView] = useState<"editor" | "result">("editor");
   const [shown, setShown] = useState<OutputFormat>("gif");
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [support, setSupport] = useState<LocalSupport>("ok");
+  const [support, setSupport] = useState<LocalSupport>({ status: "ok" });
   const fileInput = useRef<HTMLInputElement>(null);
 
   const source = loader.state.status === "ready" ? loader.state.source : null;
@@ -97,7 +98,7 @@ export function App() {
     <div className="flex min-h-dvh flex-col lg:h-dvh">
       <header className="flex h-12 shrink-0 items-center gap-3 border-b border-line bg-surface px-4 sm:px-5">
         <div className="flex items-center gap-2 text-sm font-semibold">
-          <span className="inline-block h-4 w-4 rounded-[4px] bg-accent" aria-hidden />
+          <Logo size={18} />
           {t("appName")}
         </div>
         <div className="ml-auto flex items-center gap-1.5">

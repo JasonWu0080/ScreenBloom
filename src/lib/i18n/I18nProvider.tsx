@@ -26,8 +26,9 @@ function detect(): Lang {
 }
 
 export function I18nProvider({ children }: { children: React.ReactNode }) {
-  // The static HTML is rendered in Chinese; the visitor's preference is applied after mount.
-  const [lang, setLangState] = useState<Lang>("zh");
+  // The static HTML (what crawlers and link previews read) is rendered in English; the
+  // visitor's saved or browser language is applied after mount.
+  const [lang, setLangState] = useState<Lang>("en");
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- reading browser-only preference after hydration
@@ -36,7 +37,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
-    document.title = MESSAGES[lang].appName;
+    document.title = MESSAGES[lang].docTitle;
   }, [lang]);
 
   const setLang = useCallback((l: Lang) => {

@@ -16,6 +16,14 @@ Legend: **Done** — shipped · **Planned** — intended for that version · **E
 - English and Simplified Chinese UI
 - MIT license, GitHub CI, documentation
 
+## v0.1.1 — Post-launch maintenance (Done)
+
+- Faster GIF export (GPU-accelerated scaling canvas, −26 % in the 1080p benchmark)
+- Specific messages for missing browser APIs; clearer MP4-unavailable guidance
+- Build version, Git commit and build time in the app and `version.json`
+- Search and sharing metadata (title, Open Graph image, sitemap, structured data), app icon
+- More tests (ghosting regressions, worker lifecycle, production smoke test, benchmark) and documentation
+
 ## v0.2.0 — Browser recording (Planned)
 
 - Record the screen, a window or a tab directly in the browser (`getDisplayMedia` + `MediaRecorder`)

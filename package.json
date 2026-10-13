@@ -1,10 +1,18 @@
 {
   "name": "screenbloom",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
-  "description": "A privacy-first, open-source screen recording to GIF converter powered by native browser APIs (WebCodecs). Trim, crop and export GIF or silent MP4 entirely in the browser.",
+  "description": "A privacy-first, open-source video to GIF converter that runs entirely in the browser (WebCodecs). Trim, crop and export GIF or silent MP4 without uploading your files.",
   "license": "MIT",
   "author": "Nanjing Junhe E-Commerce Co., Ltd. <1156872601@qq.com>",
+  "homepage": "https://screenbloom.storyweave.cloud",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JasonWu0080/ScreenBloom.git"
+  },
+  "bugs": {
+    "url": "https://github.com/JasonWu0080/ScreenBloom/issues"
+  },
   "keywords": [
     "gif",
     "screen-recording",
@@ -22,15 +30,18 @@
   },
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node scripts/build-info.mjs",
     "build": "next build",
-    "postbuild": "node scripts/copy-notices.mjs",
+    "postbuild": "node scripts/postbuild.mjs",
     "start": "node scripts/serve-out.mjs",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "samples": "node scripts/make-samples.mjs",
     "e2e": "node tests/e2e/run.mjs",
+    "e2e:smoke": "node tests/e2e/smoke.mjs",
     "e2e:stress": "node tests/e2e/stress.mjs",
+    "bench": "node tests/bench/gif-bench.mjs",
     "check": "npm run typecheck && npm run lint && npm test"
   },
   "dependencies": {

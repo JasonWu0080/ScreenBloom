@@ -8,6 +8,7 @@ import { existsSync, mkdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { serve } from "../../scripts/serve-out.mjs";
+import { decodeGifInBrowser, fmtBytes, inspectGif } from "./lib.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const samples = path.join(root, "samples");
@@ -46,36 +47,6 @@ async function videoTrackSpan(file) {
   return (await track.computeDuration()) - Math.max(0, await track.getFirstTimestamp());
 }
 
-/** Parses GIF blocks: logical size, loop count, frame delays. */
-function inspectGif(file) {
-  const b = readFileSync(file);
-  let p = 13;
-  const w = b.readUInt16LE(6);
-  const h = b.readUInt16LE(8);
-  if (b[10] & 0x80) p += 3 * (1 << ((b[10] & 7) + 1));
-  let loop = null;
-  const delays = [];
-  let pendingDelay = 0;
-  for (;;) {
-    const t = b[p++];
-    if (t === 0x3b) break;
-    if (t === 0x21) {
-      const label = b[p++];
-      if (label === 0xf9) pendingDelay = b.readUInt16LE(p + 2);
-      if (label === 0xff && b.toString("ascii", p + 1, p + 12) === "NETSCAPE2.0") loop = b.readUInt16LE(p + 14);
-      for (let len = b[p++]; len; len = b[p++]) p += len;
-    } else if (t === 0x2c) {
-      const flags = b[p + 8];
-      p += 9;
-      if (flags & 0x80) p += 3 * (1 << ((flags & 7) + 1));
-      p++; // min code size
-      for (let len = b[p++]; len; len = b[p++]) p += len;
-      delays.push(pendingDelay);
-    } else throw new Error("bad GIF block");
-  }
-  return { w, h, loop, delays, totalCs: delays.reduce((s, d) => s + d, 0) };
-}
-
 async function setInput(page, selector, value) {
   await page.fill(selector, String(value));
   await page.press(selector, "Enter");
@@ -99,20 +70,6 @@ async function exportAndDownload(page, label, name) {
   const file = path.join(outDir, name);
   await download.saveAs(file);
   return { file, info, suggested: download.suggestedFilename() };
-}
-
-/** How Chrome itself interprets the exported GIF (loop count, frames). */
-async function chromeGifInfo(page) {
-  return page.evaluate(async () => {
-    const img = document.querySelector('[data-testid="result-preview"]');
-    const data = await (await fetch(img.src)).arrayBuffer();
-    const dec = new ImageDecoder({ data, type: "image/gif" });
-    await dec.tracks.ready;
-    const tr = dec.tracks.selectedTrack;
-    const out = { frames: tr.frameCount, repetition: tr.repetitionCount, natural: [img.naturalWidth, img.naturalHeight] };
-    dec.close();
-    return out;
-  });
 }
 
 const server = await serve(PORT);
@@ -157,8 +114,10 @@ try {
     check("A GIF no delay below 2 cs", g.delays.every((d) => d >= 2));
     check("A NETSCAPE loop = 2 (play 3 times)", g.loop === 2, String(g.loop));
     check("A ffprobe duration 3.0 s", near(Number(pr.format.duration), 3, 0.02), pr.format.duration);
-    const cg = await chromeGifInfo(page);
+    const cg = await decodeGifInBrowser(page);
     check("A Chrome ImageDecoder repetitionCount = 2", cg.repetition === 2, JSON.stringify(cg));
+    check("A Chrome decodes every frame, 3.00 s, at 960×540", cg.frames === g.delays.length && cg.size.join() === "960,540" && Math.abs(cg.durationMs - 3000) <= 10, `${cg.frames} frames, ${cg.durationMs} ms`);
+    check("A last composited frame fully opaque (disposal + transparency)", cg.transparentPixelsInLast === 0, String(cg.transparentPixelsInLast));
     check("A result panel shows real size", /960 × 540/.test(rinfo) && /(KB|MB)/.test(rinfo), rinfo.replace(/\s+/g, " "));
     check("A download filename", suggested === "landscape-text-1440p-960x540.gif", suggested);
     check("A file size shown matches downloaded bytes", rinfo.includes(fmtBytes(statSync(file).size)), fmtBytes(statSync(file).size));
@@ -280,8 +239,11 @@ try {
     await page.getByRole("button", { name: "Export GIF", exact: true }).click();
     await page.waitForFunction(() => Number(document.querySelector('[role="progressbar"]')?.getAttribute("aria-valuenow") ?? 0) >= 5, null, { timeout: 60000 });
     const workersBefore = await page.evaluate(() => performance.getEntriesByType("resource").filter((r) => /worker/.test(r.name)).length);
+    check("H a worker runs during export", page.workers().length === 1, String(page.workers().length));
     await page.getByRole("button", { name: "Cancel", exact: true }).click();
     await page.waitForSelector('button:has-text("Export GIF")', { timeout: 5000 });
+    for (let i = 0; i < 20 && page.workers().length; i++) await page.waitForTimeout(50);
+    check("H cancel terminates the worker", page.workers().length === 0, String(page.workers().length));
     const presetAfter = await page.getByRole("radio", { name: "HD" }).getAttribute("aria-checked");
     check("H cancel returns to editor with settings kept", presetAfter === "true");
     check("H no result after cancel", (await page.locator('[data-testid="result-preview"]').count()) === 0);
@@ -373,6 +335,50 @@ try {
     execFileSync("ffmpeg", ["-v", "error", "-y", "-i", file, "-frames:v", "1", path.join(outDir, "K-frame.png")]);
   }
 
+  // L. A browser without WebCodecs gets a specific explanation instead of a broken page.
+  {
+    const old = await browser.newContext();
+    await old.addInitScript(() => {
+      localStorage.setItem("lang", "en");
+      delete window.VideoDecoder;
+      delete window.VideoFrame;
+    });
+    const op = await old.newPage();
+    await op.goto(BASE);
+    const alert = await op.waitForSelector('main [role="alert"]', { timeout: 10000 });
+    const text = await alert.textContent();
+    check("L missing WebCodecs: names the missing APIs", /missing required features \(VideoDecoder, VideoFrame\)/.test(text) && /Chrome or Edge/.test(text), text);
+    check("L missing WebCodecs: file picker disabled", await op.getByRole("button", { name: "Choose file" }).isDisabled());
+    await old.close();
+  }
+
+  // M. Search / share metadata and build identity are part of the static build.
+  {
+    const pkg = JSON.parse(readFileSync(path.join(root, "package.json"), "utf8"));
+    await page.goto(BASE);
+    check("M title names the product", /^ScreenBloom — /.test(await page.title()), await page.title());
+    const meta = await page.evaluate(() => ({
+      og: document.querySelector('meta[property="og:image"]')?.content,
+      canonical: document.querySelector('link[rel="canonical"]')?.href,
+      ld: JSON.parse(document.querySelector('script[type="application/ld+json"]')?.textContent ?? "{}"),
+      version: document.querySelector('[data-testid="app-version"]')?.textContent ?? "",
+    }));
+    check("M canonical + og:image are absolute https URLs", /^https:\/\//.test(meta.canonical) && /^https:\/\/.*\/og-image\.png$/.test(meta.og), `${meta.canonical} ${meta.og}`);
+    check("M JSON-LD is a SoftwareApplication with the package version, no ratings", meta.ld["@type"] === "SoftwareApplication" && meta.ld.softwareVersion === pkg.version && !("aggregateRating" in meta.ld), JSON.stringify(meta.ld).slice(0, 120));
+    check("M footer shows the package version", meta.version.includes(`v${pkg.version}`), meta.version);
+    for (const [file, type] of [
+      ["robots.txt", /text\/plain/],
+      ["sitemap.xml", /xml/],
+      ["og-image.png", /image\/png/],
+      ["version.json", /json/],
+    ]) {
+      const res = await page.request.get(BASE + file);
+      check(`M /${file} served as ${type.source.replace(/\\/g, "")}`, res.ok() && type.test(res.headers()["content-type"] ?? ""), `${res.status()} ${res.headers()["content-type"]}`);
+    }
+    const v = await (await page.request.get(BASE + "version.json")).json();
+    check("M version.json matches package.json and has a commit", v.version === pkg.version && /^[0-9a-f]{40}/.test(v.commit), JSON.stringify(v));
+  }
+
   check("No page errors in console", pageErrors.length === 0, pageErrors.slice(0, 3).join(" | "));
   check("Privacy: only same-origin GET requests (main test context)", foreignRequests.length === 0, foreignRequests.slice(0, 5).join(" | "));
 } catch (e) {
@@ -381,11 +387,6 @@ try {
 } finally {
   await browser.close();
   server.close();
-}
-
-function fmtBytes(n) {
-  if (n < 1024 ** 2) return `${(n / 1024).toFixed(n < 10 * 1024 ? 1 : 0)} KB`;
-  return `${(n / 1024 ** 2).toFixed(n < 100 * 1024 ** 2 ? 2 : 1)} MB`;
 }
 
 console.log(`\n${results.length - failures}/${results.length} checks passed${skipped.length ? `, ${skipped.length} skipped` : ""}. Outputs and screenshots: ${path.relative(root, outDir)}`);

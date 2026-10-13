@@ -102,7 +102,7 @@ export function SettingsPanel({
             ]}
             onChange={(v) => set("format", v)}
           />
-          {mp4Support === "no" && <p className="text-xs text-ink-3">MP4: {t("mp4UnavailableShort")}</p>}
+          {mp4Support === "no" && <p className="text-xs leading-relaxed text-ink-3">{t("mp4UnavailableHelp")}</p>}
           {mp4Support === "checking" && <p className="text-xs text-ink-3">MP4: {t("checking")}</p>}
         </Field>
 

@@ -63,7 +63,8 @@ export function ResultScreen({
           )}
         </div>
 
-        <dl className="tnum grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm" data-testid="result-info">
+        {/* data-stats: worker timings, read by the benchmark (tests/bench/gif-bench.mjs). */}
+        <dl className="tnum grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm" data-testid="result-info" data-stats={JSON.stringify(result.stats)}>
           <dt className="text-ink-3">{t("resultFormat")}</dt>
           <dd className="text-right font-medium">{label(result.format)}</dd>
           <dt className="text-ink-3">{t("resultSize")}</dt>

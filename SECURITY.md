@@ -4,9 +4,15 @@
 
 **Please do not report security vulnerabilities in public issues, discussions or pull requests.**
 
-Report them privately by e-mail to **1156872601@qq.com**, or through GitHub's **"Report a vulnerability"** button on the repository's *Security* tab ([private vulnerability reporting](https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing-information-about-vulnerabilities/privately-reporting-a-security-vulnerability)).
+Report them privately by e-mail to **1156872601@qq.com** with a subject starting with
+`[ScreenBloom security]`. This is the primary channel and always works.
 
-> Maintainers: private vulnerability reporting must be enabled in the repository settings (*Settings → Code security → Private vulnerability reporting*) before this channel works.
+If the repository's *Security* tab shows a **"Report a vulnerability"** button, you can use
+GitHub's [private vulnerability reporting](https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing-information-about-vulnerabilities/privately-reporting-a-security-vulnerability)
+instead; it keeps the report and the fix discussion private on GitHub.
+
+> Maintainers: as of 2026-10-14 private vulnerability reporting is **not enabled**. Turn it on
+> under *Settings → Code security → Private vulnerability reporting* to offer the second channel.
 
 Please include what is affected, steps or a proof of concept, and the impact you expect. Do not include other people's private recordings.
 

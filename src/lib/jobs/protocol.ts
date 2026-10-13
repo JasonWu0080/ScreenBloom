@@ -38,6 +38,22 @@ export interface ExportResult {
   duration: number;
   /** Frames actually written (after merging identical GIF frames). */
   frames: number;
+  stats: ExportStats;
+}
+
+/**
+ * Where the export spent its time, in milliseconds, measured in the worker. Decoding runs
+ * concurrently with our own work, so `decode` is the time spent *waiting* for decoded frames.
+ */
+export interface ExportStats {
+  total: number;
+  /** GIF only: sampling frames and building the global palette. */
+  palette: number;
+  decode: number;
+  /** Crop + scale on the OffscreenCanvas and reading pixels back. */
+  process: number;
+  /** GIF: palette mapping, frame differencing, LZW, file assembly. MP4: H.264 encoding and muxing. */
+  encode: number;
 }
 
 export interface Capabilities {

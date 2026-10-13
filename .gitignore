@@ -42,3 +42,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# written by `npm run build` (scripts/build-info.mjs)
+/build-info.json

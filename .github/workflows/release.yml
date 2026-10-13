@@ -27,10 +27,10 @@ jobs:
     env:
       TAG: ${{ github.event.inputs.tag || github.ref_name }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: ${{ env.TAG }}
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -48,6 +48,8 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run build
+      - name: Build reports the tagged version and commit
+        run: node -e 'const v=require("./out/version.json"); const head=require("child_process").execSync("git rev-parse HEAD").toString().trim(); if ("v"+v.version!==process.env.TAG || v.commit!==head) { console.error(v, head); process.exit(1) }'
 
       - name: Package static site
         run: |
@@ -61,13 +63,22 @@ jobs:
           version="${TAG#v}"
           awk -v v="$version" '
             $0 ~ "^## \\[" v "\\]" { found = 1; next }
-            found && /^## \[/ { exit }
-            found { print }
-          ' CHANGELOG.md > release-notes.md
-          if [ ! -s release-notes.md ]; then
+            found && /^(## \[|\[[^]]+\]: )/ { exit }
+            found && !/^<!--/ { print }
+          ' CHANGELOG.md > changelog-section.md
+          if [ ! -s changelog-section.md ]; then
             echo "CHANGELOG.md has no section for $version" >&2
             exit 1
           fi
+          {
+            cat changelog-section.md
+            echo
+            echo "### Downloads"
+            echo
+            echo "- \`screenbloom-${TAG}-static.zip\` is the **static website build** for self-hosting (upload its contents to any HTTPS static host, see docs/SELF_HOSTING.md). It is not a desktop application or installer."
+            echo "- \`screenbloom-${TAG}-static.zip.sha256\` is its SHA-256 checksum (\`sha256sum -c\`)."
+            echo "- No download is needed to use ScreenBloom: https://screenbloom.storyweave.cloud"
+          } > release-notes.md
 
       - name: Create draft release
         env:
