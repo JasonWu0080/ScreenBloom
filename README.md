@@ -125,9 +125,6 @@ The output in `out/` is a static site (≈1.3 MB). The worker bundle is only dow
 
 Current results are recorded in [docs/OPEN_SOURCE_RELEASE_REPORT.md](docs/OPEN_SOURCE_RELEASE_REPORT.md).
 
-## Browser support
-
-Automated tests run in **desktop Google Chrome on macOS**. Other browsers have not been verified yet — see [docs/BROWSER_SUPPORT.md](docs/BROWSER_SUPPORT.md) for the matrix and manual test steps. The app checks capabilities at runtime (secure context, Worker, WebCodecs, OffscreenCanvas, actual decode of the file, actual H.264 encoder support) and explains what is unavailable.
 
 ## Architecture
 
