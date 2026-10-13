@@ -2,6 +2,7 @@
 // Drives the real UI, downloads the real outputs and inspects them with ffprobe + a GIF parser.
 // Usage: npm run samples && npm run build && npm run e2e
 import { chromium } from "playwright";
+import { ALL_FORMATS, FilePathSource, Input } from "mediabunny";
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import path from "node:path";
@@ -35,12 +36,14 @@ function ffprobe(file) {
   return JSON.parse(execFileSync("ffprobe", ["-v", "error", "-show_streams", "-show_format", "-count_frames", "-of", "json", file]).toString());
 }
 
-/** Seconds from the first video packet's pts to the end of the last one (pts + duration). */
-function videoTrackSpan(file) {
-  const rows = execFileSync("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "packet=pts_time,duration_time", "-of", "csv=p=0", file])
-    .toString().trim().split("\n").map((l) => l.split(",").map(Number)).filter(([t, d]) => Number.isFinite(t) && Number.isFinite(d));
-  const start = Math.max(0, Math.min(...rows.map(([t]) => t)));
-  return Math.max(...rows.map(([t, d]) => t + d)) - start;
+/**
+ * Seconds from the first video sample to the end of the last one, read from the container's
+ * sample tables. ffprobe is not used: its VFR durations differ between versions (6.1 vs 8.x).
+ */
+async function videoTrackSpan(file) {
+  const input = new Input({ source: new FilePathSource(file), formats: ALL_FORMATS });
+  const track = await input.getPrimaryVideoTrack();
+  return (await track.computeDuration()) - Math.max(0, await track.getFirstTimestamp());
 }
 
 /** Parses GIF blocks: logical size, loop count, frame delays. */
@@ -251,9 +254,7 @@ try {
     const { file } = await exportAndDownload(page, "Export GIF", "F.gif");
     const g = inspectGif(file);
     const pr = ffprobe(file);
-    // Expected span = end of the last video packet minus the first timestamp (what the app reads).
-    // format.duration is not used: older ffmpeg builds (e.g. 6.1 on Ubuntu 24.04) report it differently for VFR.
-    const srcDur = videoTrackSpan(path.join(samples, "vfr-1280.mp4"));
+    const srcDur = await videoTrackSpan(path.join(samples, "vfr-1280.mp4"));
     check(`F VFR source → GIF spans the full ${srcDur.toFixed(2)} s at 10 fps`, Math.abs(g.totalCs - srcDur * 100) <= 1, `${g.totalCs} cs, ${g.delays.length} frames written, ffprobe ${pr.format.duration}`);
   }
 
