@@ -35,6 +35,14 @@ function ffprobe(file) {
   return JSON.parse(execFileSync("ffprobe", ["-v", "error", "-show_streams", "-show_format", "-count_frames", "-of", "json", file]).toString());
 }
 
+/** Seconds from the first video packet's pts to the end of the last one (pts + duration). */
+function videoTrackSpan(file) {
+  const rows = execFileSync("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "packet=pts_time,duration_time", "-of", "csv=p=0", file])
+    .toString().trim().split("\n").map((l) => l.split(",").map(Number)).filter(([t, d]) => Number.isFinite(t) && Number.isFinite(d));
+  const start = Math.max(0, Math.min(...rows.map(([t]) => t)));
+  return Math.max(...rows.map(([t, d]) => t + d)) - start;
+}
+
 /** Parses GIF blocks: logical size, loop count, frame delays. */
 function inspectGif(file) {
   const b = readFileSync(file);
@@ -165,7 +173,9 @@ try {
     const a = mp.streams.filter((s) => s.codec_type === "audio");
     check("B MP4 has exactly one H.264 video stream", v.length === 1 && v[0].codec_name === "h264", v.map((s) => s.codec_name).join());
     check("B MP4 has no audio stream (source had AAC)", a.length === 0);
-    check("B MP4 960×540 yuv420p", v[0].width === 960 && v[0].height === 540 && v[0].pix_fmt === "yuv420p", `${v[0].width}×${v[0].height} ${v[0].pix_fmt}`);
+    // Chrome's software H.264 encoder (Linux) flags canvas-sourced frames as full range, which
+    // ffprobe reports as yuvj420p; hardware encoders (macOS) emit limited-range yuv420p. Both are 4:2:0.
+    check("B MP4 960×540 yuv420p", v[0].width === 960 && v[0].height === 540 && /^yuvj?420p$/.test(v[0].pix_fmt), `${v[0].width}×${v[0].height} ${v[0].pix_fmt}`);
     check("B MP4 duration 3.0 s", near(Number(mp.format.duration), 3, 0.04), mp.format.duration);
     check("B MP4 frame count = 3 s × 15 fps", Number(v[0].nb_read_frames) === 45, v[0].nb_read_frames);
     check("B MP4 container is ISO MP4", /mp4/.test(mp.format.format_name) && /isom|mp4/i.test(mp.format.tags?.major_brand ?? "isom"), `${mp.format.format_name} ${mp.format.tags?.major_brand}`);
@@ -241,7 +251,9 @@ try {
     const { file } = await exportAndDownload(page, "Export GIF", "F.gif");
     const g = inspectGif(file);
     const pr = ffprobe(file);
-    const srcDur = Number(ffprobe(path.join(samples, "vfr-1280.mp4")).format.duration);
+    // Expected span = end of the last video packet minus the first timestamp (what the app reads).
+    // format.duration is not used: older ffmpeg builds (e.g. 6.1 on Ubuntu 24.04) report it differently for VFR.
+    const srcDur = videoTrackSpan(path.join(samples, "vfr-1280.mp4"));
     check(`F VFR source → GIF spans the full ${srcDur.toFixed(2)} s at 10 fps`, Math.abs(g.totalCs - srcDur * 100) <= 1, `${g.totalCs} cs, ${g.delays.length} frames written, ffprobe ${pr.format.duration}`);
   }
 
