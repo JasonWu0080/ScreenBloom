@@ -62,7 +62,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: e2e-results
-          path: test-results/
+          path: |
+            test-results/
+            samples/vfr-1280.mp4
           retention-days: 7
 
   # Large-input limit and timing checks are slow; run them on demand only.
